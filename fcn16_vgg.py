@@ -55,15 +55,15 @@ class FCN16VGG:
 
         with tf.name_scope('Processing'):
 
-            red, green, blue = tf.split(3, 3, rgb)
+            red, green, blue = tf.split(rgb, 3, 3)
             # assert red.get_shape().as_list()[1:] == [224, 224, 1]
             # assert green.get_shape().as_list()[1:] == [224, 224, 1]
             # assert blue.get_shape().as_list()[1:] == [224, 224, 1]
-            bgr = tf.concat(3, [
+            bgr = tf.concat([
                 blue - VGG_MEAN[0],
                 green - VGG_MEAN[1],
                 red - VGG_MEAN[2],
-            ])
+            ], 3)
 
             if debug:
                 bgr = tf.Print(bgr, [tf.shape(bgr)],
@@ -190,7 +190,7 @@ class FCN16VGG:
             # He initialization Sheme
             if name == "score_fr":
                 num_input = in_features
-                stddev = (2 / num_input)**0.5
+                stddev = (2 / num_input) ** 0.5
             elif name == "score_pool4":
                 stddev = 0.001
             # Apply convolution
@@ -221,14 +221,14 @@ class FCN16VGG:
                 new_shape = [in_shape[0], h, w, num_classes]
             else:
                 new_shape = [shape[0], shape[1], shape[2], num_classes]
-            output_shape = tf.pack(new_shape)
+            output_shape = tf.stack(new_shape)
 
             logging.debug("Layer: %s, Fan-in: %d" % (name, in_features))
             f_shape = [ksize, ksize, num_classes, in_features]
 
             # create
             num_input = ksize * ksize * in_features / stride
-            stddev = (2 / num_input)**0.5
+            stddev = (2 / num_input) ** 0.5
 
             weights = self.get_deconv_filter(f_shape)
             deconv = tf.nn.conv2d_transpose(bottom, weights, output_shape,
@@ -245,7 +245,7 @@ class FCN16VGG:
     def get_deconv_filter(self, f_shape):
         width = f_shape[0]
         heigh = f_shape[0]
-        f = ceil(width/2.0)
+        f = ceil(width / 2.0)
         c = (2 * f - 1 - f % 2) / (2.0 * f)
         bilinear = np.zeros([f_shape[0], f_shape[1]])
         for x in range(width):
@@ -269,7 +269,7 @@ class FCN16VGG:
         print('Layer shape: %s' % str(shape))
         var = tf.get_variable(name="filter", initializer=init, shape=shape)
         if not tf.get_variable_scope().reuse:
-            weight_decay = tf.mul(tf.nn.l2_loss(var), self.wd,
+            weight_decay = tf.multiply(tf.nn.l2_loss(var), self.wd,
                                   name='weight_loss')
             tf.add_to_collection('losses', weight_decay)
         return var
@@ -291,7 +291,7 @@ class FCN16VGG:
         shape = self.data_dict[name][0].shape
         var = tf.get_variable(name="weights", initializer=init, shape=shape)
         if not tf.get_variable_scope().reuse:
-            weight_decay = tf.mul(tf.nn.l2_loss(var), self.wd,
+            weight_decay = tf.multiply(tf.nn.l2_loss(var), self.wd,
                                   name='weight_loss')
             tf.add_to_collection('losses', weight_decay)
         return var
@@ -300,12 +300,12 @@ class FCN16VGG:
         """ Build bias weights for filter produces with `_summary_reshape`
 
         """
-        n_averaged_elements = num_orig//num_new
+        n_averaged_elements = num_orig // num_new
         avg_bweight = np.zeros(num_new)
         for i in range(0, num_orig, n_averaged_elements):
             start_idx = i
             end_idx = start_idx + n_averaged_elements
-            avg_idx = start_idx//n_averaged_elements
+            avg_idx = start_idx // n_averaged_elements
             if avg_idx == num_new:
                 break
             avg_bweight[avg_idx] = np.mean(bweight[start_idx:end_idx])
@@ -334,13 +334,13 @@ class FCN16VGG:
         """
         num_orig = shape[3]
         shape[3] = num_new
-        assert(num_new < num_orig)
-        n_averaged_elements = num_orig//num_new
+        assert (num_new < num_orig)
+        n_averaged_elements = num_orig // num_new
         avg_fweight = np.zeros(shape)
         for i in range(0, num_orig, n_averaged_elements):
             start_idx = i
             end_idx = start_idx + n_averaged_elements
-            avg_idx = start_idx//n_averaged_elements
+            avg_idx = start_idx // n_averaged_elements
             if avg_idx == num_new:
                 break
             avg_fweight[:, :, :, avg_idx] = np.mean(
@@ -370,7 +370,7 @@ class FCN16VGG:
                               initializer=initializer)
 
         if wd and (not tf.get_variable_scope().reuse):
-            weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+            weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
             tf.add_to_collection('losses', weight_decay)
         return var
 
@@ -407,5 +407,5 @@ def _activation_summary(x):
     # session. This helps the clarity of presentation on tensorboard.
     tensor_name = x.op.name
     # tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
-    tf.histogram_summary(tensor_name + '/activations', x)
-    tf.scalar_summary(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
+    tf.summary.histogram(tensor_name + '/activations', x)
+    tf.summary.scalar(tensor_name + '/sparsity', tf.nn.zero_fraction(x))

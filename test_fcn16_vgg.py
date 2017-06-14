@@ -27,7 +27,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = ''
 img1 = skimage.io.imread("./test_data/tabby_cat.png")
 
 with tf.Session() as sess:
-    images = tf.placeholder("float")
+    images = tf.placeholder(dtype=tf.float32)
     feed_dict = {images: img1}
     batch_images = tf.expand_dims(images, 0)
 
